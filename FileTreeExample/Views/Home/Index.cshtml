@@ -1,0 +1,371 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+<link href="~/css/file-tree.css" rel="stylesheet" />
+    <div id="tests-page" class="page-layout carded full-width">
+
+        <div id="directory-tree"  style="position:relative;overflow-y:hidden; height:100%;">
+            <div class="d-flex toolbar no-gutters align-items-center flex-nowrap">
+                <button v-on:click="historyBack" style="height: 2.4rem; width: 6.4rem;">
+                    Önceki
+                </button>
+                <button v-on:click="returnToParent" style="height: 2.4rem; width: 6.4rem;">
+                    Üst  
+                </button>
+                <span class="d-flex align-items-center text-truncate mr-4" style="padding:2rem;height: 6.4rem; flex: 1 1 auto;">{{rootDirectory.Name}}</span>
+                <input type="text" id="filter-files" class="toolbar-input px-3 py-2 mr-4" style="border: 1px solid #ccc; border-radius: 6px;" placeholder="Arama yapın" />
+            </div>
+            <div class="directory-tree page-content">
+                <div id="left" class="directory-tree-container">
+                    <tree v-bind:name="rootDirectory.Name"
+                          v-bind:directories="rootDirectory.Directories"
+                          v-bind:files="rootDirectory.Files"
+                          v-bind:currentDirectory="currentDirectory"
+                          v-bind:changeDirSections="changeDirSections"></tree>
+
+                </div>
+
+
+                <files-board v-bind:currentDirectory="currentDirectory"
+                             v-bind:rootPathImg="rootPathImg"
+                             v-bind:rootPathFile="rootPathFile"
+                             v-bind:handleSelectFolder="handleSelectFolder"></files-board>
+                <template id="files-board">
+                    <div id="handle"></div>
+
+                    <div id="right">
+
+                        <div id="file-list" class="file-list">
+                            <div :id="cd.ID" v-on:click="handleSelectFolder(cd.ID)" v-for="cd in currentDirectory.Directories" class="file-item-container">
+                                <img style="width:96px;height:96px;" src="~/images/filetypes/folder.png" />
+                                <span class="mt-1">{{cd.Name.length > 39 ? cd.Name.substring(0, 38) + "..." : cd.Name}}</span>
+                            </div>
+                            <div v-for="cf in currentDirectory.Files" class="file-item-container">
+                                <input v-if="cf.Name == '__gallery.txt' " type="hidden" id="is-gallery" value="true" />
+
+                                <a v-if="cf.Extension == '.xls' || cf.Extension == '.xlsx'" class="file-item"
+                                   v-bind:href="'ms-excel:ofe|u|https://intranet.npistanbul.com/files/'+(cf.FileName.replace('C:\\inetpub\\intranet\\files\\','')).replace('\\','/')">
+                                    <img style="width:96px;height:96px;" v-bind:src="rootPathImg+cf.Extension.substring(1,cf.Extension.length)+'.png'" />
+                                    <span class="mt-1">{{cf.Name.length > 39 ? cf.Name.substring(0, 38) + "..." : cf.Name}}</span>
+                                </a>
+
+                                <a v-else-if="cf.Extension == '.doc' || cf.Extension == '.docx'" class="file-item"
+                                   v-bind:href="'ms-word:ofe|u|https://intranet.npistanbul.com/files/'+cf.FileName.replace('C:\\inetpub\\intranet\\files\\','').replace('\\','/')">
+                                    <img style="width:96px;height:96px;" :src="rootPathImg+cf.Extension.substring(1,cf.Extension.length)+'.png'" />
+                                    <span class="mt-1">{{cf.Name.length > 39 ? cf.Name.substring(0, 38) + "..." : cf.Name}}</span>
+                                </a>
+
+                                <a v-else-if="cf.Extension.toLowerCase() == '.jpg' || cf.Extension.toLowerCase() == '.jpeg' || cf.Extension.toLowerCase() == '.png'"
+                                   class="file-item preview-item"
+                                   :data-id="cf.Name"
+                                   :data-path="cf.FileName.replace('C:\\inetpub\\intranet\\files\\','').replace('\\','/')"
+                                   data-type="image"
+                                   v-bind:href="rootPathFile+cf.FileName.replace('C:\\inetpub\\intranet\\files\\','').replace('\\','/')">
+                                    <img style="width:96px;height:96px;" :src="rootPathFile+cf.FileName.replace('C:\\inetpub\\intranet\\files\\','').replace('\\','/')" style="height: auto;" />
+                                    <span class="mt-1">{{cf.Name.length > 39 ? cf.Name.substring(0, 38) + "..." : cf.Name}}</span>
+                                </a>
+
+                                <a v-else-if="cf.Extension.toLowerCase() == '.mp4'"
+                                   class="file-item preview-item"
+                                   :data-id="cf.Name"
+                                   :data-path="cf.FileName.replace('C:\\inetpub\\intranet\\files\\','').replace('\\','/')"
+                                   data-type="image"
+                                   v-bind:href="rootPathFile+cf.FileName.replace('C:\\inetpub\\intranet\\files\\','').replace('\\','/')">
+                                    <img style="width:96px;height:96px;" :src="rootPathImg+cf.Extension.substring(1,cf.Extension.length)+'.png'" />
+                                    <span class="mt-1">{{cf.Name.length > 39 ? cf.Name.substring(0, 38) + "..." : cf.Name}}</span>
+                                </a>
+
+                                <a v-else-if="cf.Extension != '.db'" class="file-item"
+                                   v-bind:href="rootPathFile+cf.FileName.replace('C:\\inetpub\\intranet\\files\\','').replace('\\','/')">
+                                    <img style="width:96px;height:96px;" :src="rootPathImg+cf.Extension.substring(1,cf.Extension.length)+'.png'" />
+                                    <span class="mt-1">{{cf.Name.length > 39 ? cf.Name.substring(0, 38) + "..." : cf.Name}}</span>
+                                </a>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                </template>
+            </div>
+        </div>
+    </div>
+    @section pagescripts {
+        <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+        <script>
+        var isResizing = false,lastDownX = 0;
+
+        var handleSelectDirectory = null;
+        var changeDirSections = null;
+        var selectedItem = null;
+
+        function removeAllSelected() {
+            if (selectedItem) {
+                var els = document.getElementsByClassName("selected")
+                for (var i = 0; i < els.length; i++) {
+                    if (els[i] != selectedItem)
+                        els[i].classList.remove("selected")
+                }
+            }
+        }
+
+            function findDirectory(id, data) {
+                var result = null;
+                for (var x = 0; x < data.length; x++) {
+                    if (data[x].ID === id) {
+                        return data[x]
+                    }
+                    if (data[x].Directories && data[x].Directories.length > 0) { result = findDirectory(id, data[x].Directories); }
+                }
+                return result
+            }
+          
+        function findParentDirectory(id, data, callBack) {
+            for (var x = 0; x < data.length; x++) {
+                if (data[x].Directories && data[x].Directories.length > 0) {
+                    var index = callBack(id, data[x].Directories)
+                    if (index != null) {
+                        return (data[x])
+                    } return findParentDirectory(id, data[x].Directories, callBack)
+                }
+            }
+            return null
+        }
+
+        Vue.component("tree", {
+            props: {
+                files: Array,
+                directories: Array,
+                name: String,
+                currentDirectory: Object,
+                dirSections: Array
+            },
+            data: function () {
+                return {
+                    icons: {
+                        "sql": "/images/filetypes/sql.png", "doc": "/images/filetypes/doc.png", "docx": "/images/filetypes/docx.png", "folder": "/images/filetypes/folder.png",
+                        "folderClosed": "/images/filetypes/folder-closed.png", "pdf": "/images/filetypes/pdf.png", "ppsx": "/images/filetypes/ppsx.png", "pptx": "/images/filetypes/pptx.png",
+                        "video": "/images/filetypes/video.png", "xls": "/images/filetypes/xls.png", "xlsx": "/images/filetypes/xlsx.png"
+                    },
+                    toggleID : "@ViewBag.ToggleID"
+                }
+            },
+            mounted: function () {
+                if (this.toggleID.length > 0) {
+                    if (document.getElementById(this.toggleID) && document.getElementById(this.toggleID).nextElementSibling)
+                    document.getElementById(this.toggleID).nextElementSibling.classList.toggle("hidden");
+
+                }
+            },
+            methods: {
+                handleToggle(id) {
+                    var target = document.getElementById(id)
+                    var elClassList = target.nextElementSibling.classList
+                    var expandIcon = target.children[0].children[0]
+                    var currentDirectory = findDirectory(id, this.directories)
+                    if (currentDirectory.Expand) {
+                        currentDirectory.Expand = false
+                        expandIcon.classList.remove("down")
+                        expandIcon.classList.add("right")
+
+                    } else {
+                        currentDirectory.Expand = true
+                        expandIcon.classList.remove("right")
+                        expandIcon.classList.add("down")
+                    }
+
+                    elClassList.toggle("hidden")
+                    removeAllSelected()
+
+                },
+                handleSelectDirectory(id) {
+                    var currentDirectory = findDirectory(id, this.directories)
+                    handleSelectDirectory(currentDirectory)
+                },
+                handleOpenFile(file) {
+                    if (file.Name.split(".")[1] === "xls")
+                        window.open(file.FileName + " of .xls", file.Name, "")
+                    else if (file.Name.split(".")[1] === "txt")
+                        window.open(file.FileName + " of .txt", file.Name, "")
+                },
+            },
+            template: `
+            <ul class="list list-unstyled">
+                <li v-for="(directory, idx) in directories"
+                    v-bind:key="idx"             
+                    class="pl-4 list-item vertical-line ">
+                    <div :id="directory.ID" class="list-item-container"  >
+                        <div class="list-item-container-left">
+                            <i v-if="directory.Directories && directory.Directories.length > 0" v-on:click="handleToggle(directory.ID)" class="arrow right"></i>
+                            <!--<i v-else-if="directory.Files && directory.Files.length > 0" class="arrow right"></i>-->
+                            <div v-else class="empty-directory"></div>
+                            <img class="file-icon" :src="!directory.Expand ? icons['folderClosed'] : icons['folder']"/>
+                        </div>
+                        <span v-on:click="handleSelectDirectory(directory.ID)" class="list-item-span">{{directory.Name.length > 39 ? directory.Name.substring(0, 38) + "..." : directory.Name}}</span>
+                    </div>
+                    <tree v-if="directories.length > 0"
+                          v-bind:name="directory.Name"
+                          v-bind:directories="directory.Directories"
+                          v-bind:files="directory.Files"
+                          v-bind:class="{'hidden':!directory.Expand} "
+                    ></tree>
+                </li>
+        <!--
+                <li v-for="(file, idx) in files"
+                    class="mb-4 pl-4">
+                    <div class="d-flex align-items-center">
+                        <img class="file-icon" :src="file.Name.split('.')[1]==='sql' ? icons['sql']: file.Name.split('.')[1]==='doc' ? icons['doc']
+                         : file.Name.split('.')[1]==='docx' ? icons['docx'] : file.Name.split('.')[1]==='pdf' ? icons['pdf'] : file.Name.split('.')[1]==='ppsx' ? icons['ppsx']
+                         : file.Name.split('.')[1]==='pptx' ? icons['pptx'] : file.Name.split('.')[1]==='video' ? icons['video'] : file.Name.split('.')[1]==='xls' ? icons['xls']
+                         : file.Name.split('.')[1]==='xlsx' ? icons['xlsx'] :null"/>
+                        <span v-on:click="handleOpenFile(file)" class="list-item-span">{{file.Name}}</span>
+                    </div>
+                </li>
+        -->
+            </ul>`
+
+            });
+
+            window.onresize = function (event) {
+                var right = document.getElementById("right")
+                if (right) {
+                    right.style.width = "auto"
+                }
+            };
+
+   
+        function resize(e){
+             var container = document.getElementById("tests-page").parentElement
+             var left = document.getElementById("left")
+             var right = document.getElementById("right")
+             var handle = document.getElementById("handle"); 
+             var offsetRight = container.offsetWidth - (e.clientX - container.offsetLeft);
+             left.style.width = ((container.offsetWidth  - offsetRight)) +"px"
+             right.style.width = offsetRight+"px"
+             
+        }  
+        var directoryTree = new  Vue({
+            el:"#directory-tree",
+            data:function() {
+                return {
+                    rootDirectory:  @Html.Raw(ViewBag.Directories),
+                    currentDirectory:  @Html.Raw(ViewBag.Directories),
+                    rootPathImg: appRoot + "images/filetypes/",
+                    rootPathFile: appRoot + "files/",
+                    dirSections: []
+                }
+            },
+            mounted: function () {
+                handleSelectDirectory = this.handleSelectDirectory
+                changeDirSections = this.changeDirSections
+                handle.addEventListener("mousedown", function(e){
+                    isResizing = true;
+                    lastDownX = e.clientX;
+                    document.addEventListener("mousemove", resize, false);
+                }, false);
+                document.addEventListener("mouseup", function(){ 
+                    isResizing = false;
+                    document.removeEventListener("mousemove", resize, false); 
+                }, false)
+                this.dirSections.push(@Html.Raw(ViewBag.Directories))
+            },
+            methods: {
+                returnToParent: function () {
+                    var parentDirectory = findParentDirectory(this.currentDirectory.ID, new Array(this.rootDirectory), function (id, data) {
+                        for (var x = 0; x < data.length; x++) {
+                            if (data[x].ID === id) {
+                                return x;
+                            }
+                        }
+                        return null
+                    })
+                    if (parentDirectory) {
+                        document.getElementById(this.currentDirectory.ID).classList.remove("selected")
+                        var parent = document.getElementById(parentDirectory.ID)
+                        if (parent) {
+                            parent.classList.add("selected")
+                        }
+                        this.currentDirectory = parentDirectory
+                    }
+                },
+                historyBack: function () {
+                    var length = this.dirSections.length
+                    if (length > 0) {
+                        var index = null
+                        if (length > 1) {
+                            index = length - 2
+                        } else index = length - 1;
+                        var current = null
+                        var lastDirectory = this.dirSections[index]
+                        current = document.getElementById(this.currentDirectory.ID)
+                        if (current) current.classList.remove("selected");
+                        this.currentDirectory = lastDirectory
+                        this.dirSections.pop()
+                        current = document.getElementById(lastDirectory.ID)
+                        if (current) current.classList.add("selected");
+                    }
+                },
+                changeDirSections: function (currentDirectory) {
+                    const index = this.dirSections.indexOf(currentDirectory)
+                    if (index > -1) {
+                        this.dirSections.splice(index, 1)
+                    } else {
+                        this.dirSections.push(currentDirectory)
+                    }
+                },
+                handleSelectDirectory: function (currentDirectory) {
+                    if (currentDirectory) {
+                        var els = document.getElementsByClassName("selected")
+                        for (var i = 0; i < els.length; i++) {
+                            els[i].classList.remove("selected")
+                        }
+                        this.currentDirectory = currentDirectory
+                        document.getElementById(currentDirectory.ID).classList.add("selected")
+                        this.changeDirSections(currentDirectory)
+                    }
+                },
+                handleSelectFolder: function (id) {
+                    var currentDirectory = findDirectory(id, this.rootDirectory.Directories)
+                    this.changeDirSections(currentDirectory)
+                    if (this.currentDirectory.Expand) {
+                        var els = document.getElementsByClassName("selected")
+                        for (var i = 0; i < els.length; i++) {
+                            els[i].classList.remove("selected")
+                        }
+                    }
+                    this.currentDirectory = currentDirectory
+                    var target = document.getElementById(id)
+
+                    target.classList.toggle("selected")
+                    selectedItem = target
+                    /*
+                    var expandIcon = target.children[0].children[0]
+                    if (currentDirectory.Expand) {
+                        currentDirectory.Expand = false
+                        expandIcon.classList.remove("down")
+                        expandIcon.classList.add("right")
+                    } else {
+                        currentDirectory.Expand = true
+                        expandIcon.classList.remove("right")
+                        expandIcon.classList.add("down")
+                    }
+                    elClassList.toggle("hidden")
+                    
+                    */
+                }
+            }
+        });
+
+        var filesBoard = new Vue({
+            template: '#files-board',
+
+            props: ['currentDirectory', 'rootPathImg','rootPathFile'],
+
+
+        });
+
+
+        Vue.component('files-board', filesBoard);
+        </script>
+   
+    }

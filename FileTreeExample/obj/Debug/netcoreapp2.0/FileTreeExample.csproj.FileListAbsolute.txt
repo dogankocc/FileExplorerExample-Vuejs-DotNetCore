@@ -1,0 +1,11 @@
+c:\users\dogankoc\source\repos\FileTreeExample\FileTreeExample\bin\Debug\netcoreapp2.0\FileTreeExample.deps.json
+c:\users\dogankoc\source\repos\FileTreeExample\FileTreeExample\bin\Debug\netcoreapp2.0\FileTreeExample.runtimeconfig.json
+c:\users\dogankoc\source\repos\FileTreeExample\FileTreeExample\bin\Debug\netcoreapp2.0\FileTreeExample.runtimeconfig.dev.json
+c:\users\dogankoc\source\repos\FileTreeExample\FileTreeExample\bin\Debug\netcoreapp2.0\FileTreeExample.dll
+c:\users\dogankoc\source\repos\FileTreeExample\FileTreeExample\bin\Debug\netcoreapp2.0\FileTreeExample.pdb
+c:\users\dogankoc\source\repos\FileTreeExample\FileTreeExample\obj\Debug\netcoreapp2.0\FileTreeExample.csprojAssemblyReference.cache
+c:\users\dogankoc\source\repos\FileTreeExample\FileTreeExample\obj\Debug\netcoreapp2.0\FileTreeExample.csproj.CoreCompileInputs.cache
+c:\users\dogankoc\source\repos\FileTreeExample\FileTreeExample\obj\Debug\netcoreapp2.0\FileTreeExample.AssemblyInfoInputs.cache
+c:\users\dogankoc\source\repos\FileTreeExample\FileTreeExample\obj\Debug\netcoreapp2.0\FileTreeExample.AssemblyInfo.cs
+c:\users\dogankoc\source\repos\FileTreeExample\FileTreeExample\obj\Debug\netcoreapp2.0\FileTreeExample.dll
+c:\users\dogankoc\source\repos\FileTreeExample\FileTreeExample\obj\Debug\netcoreapp2.0\FileTreeExample.pdb
