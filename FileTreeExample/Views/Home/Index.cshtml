@@ -15,7 +15,7 @@
                 <span class="d-flex align-items-center text-truncate mr-4" style="padding:2rem;height: 6.4rem; flex: 1 1 auto;">{{rootDirectory.Name}}</span>
                 <input type="text" id="filter-files" class="toolbar-input px-3 py-2 mr-4" style="border: 1px solid #ccc; border-radius: 6px;" placeholder="Arama yapın" />
             </div>
-            <div class="directory-tree page-content">
+            <div class="directory-tree " style="overflow-y:hidden">
                 <div id="left" class="directory-tree-container">
                     <tree v-bind:name="rootDirectory.Name"
                           v-bind:directories="rootDirectory.Directories"
@@ -103,33 +103,38 @@
             if (selectedItem) {
                 var els = document.getElementsByClassName("selected")
                 for (var i = 0; i < els.length; i++) {
-                    if (els[i] != selectedItem)
+                    if (els[i].id != selectedItem.id)
                         els[i].classList.remove("selected")
                 }
             }
         }
 
-            function findDirectory(id, data) {
-                var result = null;
-                for (var x = 0; x < data.length; x++) {
-                    if (data[x].ID === id) {
-                        return data[x]
-                    }
-                    if (data[x].Directories && data[x].Directories.length > 0) { result = findDirectory(id, data[x].Directories); }
+        function findDirectory(id, data, findedIndex) {
+            var result = null
+            for (var x = 0; x < data.length; x++) {
+                if (data[x].ID === id) {
+                    findedIndex = x;
+                    return (data[x])
                 }
-                return result
+                if (data[x].Directories && data[x].Directories.length > 0) {
+                    result = findDirectory(id, data[x].Directories, findedIndex);
+                    if (result != null) return result;
+                }
             }
-          
+            return result
+        }
+
         function findParentDirectory(id, data, callBack) {
+            var result = null
             for (var x = 0; x < data.length; x++) {
                 if (data[x].Directories && data[x].Directories.length > 0) {
                     var index = callBack(id, data[x].Directories)
                     if (index != null) {
                         return (data[x])
-                    } return findParentDirectory(id, data[x].Directories, callBack)
+                    } result = findParentDirectory(id, data[x].Directories, callBack)
                 }
             }
-            return null
+            return result
         }
 
         Vue.component("tree", {
@@ -161,7 +166,7 @@
                 handleToggle(id) {
                     var target = document.getElementById(id)
                     var elClassList = target.nextElementSibling.classList
-                    var expandIcon = target.children[0].children[0]
+                    var expandIcon = target.children[0].children[0].children[0]
                     var currentDirectory = findDirectory(id, this.directories)
                     if (currentDirectory.Expand) {
                         currentDirectory.Expand = false
@@ -189,28 +194,24 @@
                         window.open(file.FileName + " of .txt", file.Name, "")
                 },
             },
-            template: `
-            <ul class="list list-unstyled">
-                <li v-for="(directory, idx) in directories"
-                    v-bind:key="idx"             
-                    class="pl-4 list-item vertical-line ">
-                    <div :id="directory.ID" class="list-item-container"  >
-                        <div class="list-item-container-left">
-                            <i v-if="directory.Directories && directory.Directories.length > 0" v-on:click="handleToggle(directory.ID)" class="arrow right"></i>
-                            <!--<i v-else-if="directory.Files && directory.Files.length > 0" class="arrow right"></i>-->
-                            <div v-else class="empty-directory"></div>
-                            <img class="file-icon" :src="!directory.Expand ? icons['folderClosed'] : icons['folder']"/>
-                        </div>
-                        <span v-on:click="handleSelectDirectory(directory.ID)" class="list-item-span">{{directory.Name.length > 39 ? directory.Name.substring(0, 38) + "..." : directory.Name}}</span>
-                    </div>
-                    <tree v-if="directories.length > 0"
-                          v-bind:name="directory.Name"
-                          v-bind:directories="directory.Directories"
-                          v-bind:files="directory.Files"
-                          v-bind:class="{'hidden':!directory.Expand} "
-                    ></tree>
-                </li>
-        <!--
+            template:
+                '<ul class="list list-unstyled">' +
+                '<li v-for="(directory, idx) in directories" v-bind:key="idx" class="pl-5 list-item vertical-line ">' +
+                '<div :id="directory.ID" class="list-item-container d-flex"  >' +
+                '<div class="list-item-container-left">' +
+                '<span v-if="directory.Directories && directory.Directories.length > 0"  v-on:click="handleToggle(directory.ID)"><i class="arrow right"></i></span>' +
+                '<span v-else><div class="empty-directory"></div></span>' +
+                '</div>' +
+                '<div v-on:click="handleSelectDirectory(directory.ID)" class="list-item-container-right">' +
+                '<img class="file-icon" :src="!directory.Expand ? icons[\'folderClosed\'] : icons[\'folder\']"/>' +
+                '<span :title="directory.Name" class="text-truncate mb-0 w-100 list-item-span">{{directory.Name}}</span>' +
+                '</div>' +
+                '</div>' +
+                '<tree v-if="directories.length > 0" v-bind:name="directory.Name" v-bind:directories="directory.Directories" v-bind:files="directory.Files" v-bind:class="{\'hidden\':!directory.Expand}"></tree>' +
+                '</li>' +
+                '</ul>'
+        /*
+             <!--
                 <li v-for="(file, idx) in files"
                     class="mb-4 pl-4">
                     <div class="d-flex align-items-center">
@@ -222,7 +223,7 @@
                     </div>
                 </li>
         -->
-            </ul>`
+        */
 
             });
 
@@ -285,7 +286,9 @@
                         if (parent) {
                             parent.classList.add("selected")
                         }
+                        this.dirSections.push(parentDirectory)
                         this.currentDirectory = parentDirectory
+
                     }
                 },
                 historyBack: function () {
@@ -319,39 +322,36 @@
                         for (var i = 0; i < els.length; i++) {
                             els[i].classList.remove("selected")
                         }
+
                         this.currentDirectory = currentDirectory
                         document.getElementById(currentDirectory.ID).classList.add("selected")
                         this.changeDirSections(currentDirectory)
+
                     }
                 },
                 handleSelectFolder: function (id) {
-                    var currentDirectory = findDirectory(id, this.rootDirectory.Directories)
+                    var findedIndex = null;
+                    var currentDirectory = findDirectory(id, this.rootDirectory.Directories, findedIndex)
+
                     this.changeDirSections(currentDirectory)
-                    if (this.currentDirectory.Expand) {
+                    if (findedIndex != null && findedIndex == 0) {
                         var els = document.getElementsByClassName("selected")
                         for (var i = 0; i < els.length; i++) {
                             els[i].classList.remove("selected")
                         }
                     }
+                    else if (this.currentDirectory.Expand) {
+                        var els = document.getElementsByClassName("selected")
+                        for (var i = 0; i < els.length; i++) {
+                            els[i].classList.remove("selected")
+                        }
+                    }
+
                     this.currentDirectory = currentDirectory
                     var target = document.getElementById(id)
 
                     target.classList.toggle("selected")
                     selectedItem = target
-                    /*
-                    var expandIcon = target.children[0].children[0]
-                    if (currentDirectory.Expand) {
-                        currentDirectory.Expand = false
-                        expandIcon.classList.remove("down")
-                        expandIcon.classList.add("right")
-                    } else {
-                        currentDirectory.Expand = true
-                        expandIcon.classList.remove("right")
-                        expandIcon.classList.add("down")
-                    }
-                    elClassList.toggle("hidden")
-                    
-                    */
                 }
             }
         });
